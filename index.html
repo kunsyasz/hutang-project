@@ -123,29 +123,34 @@
                             title="Logout & Ganti ID">LOGOUT</button>
                     </div>
                 </div>
+            </div>
 
-                <!-- Circular Progress -->
-                <div class="relative w-16 h-16 flex items-center justify-center">
-                    <svg class="w-full h-full" viewBox="0 0 100 100">
-                        <circle class="text-gray-800 stroke-current" stroke-width="8" cx="50" cy="50" r="40"
-                            fill="transparent"></circle>
-                        <circle id="progress-circle" class="text-[#b026ff] progress-ring__circle stroke-current"
-                            stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent"
-                            stroke-dasharray="251.2" stroke-dashoffset="0"></circle>
-                    </svg>
-                    <div id="progress-text" class="absolute text-xs font-bold">0%</div>
-                </div>
+            <!-- Circular Progress -->
+            <div class="relative w-16 h-16 flex items-center justify-center">
+                <svg class="w-full h-full" viewBox="0 0 100 100">
+                    <circle class="text-gray-800 stroke-current" stroke-width="8" cx="50" cy="50" r="40"
+                        fill="transparent"></circle>
+                    <circle id="progress-circle" class="text-[#b026ff] progress-ring__circle stroke-current"
+                        stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent"
+                        stroke-dasharray="251.2" stroke-dashoffset="0"></circle>
+                </svg>
+                <div id="progress-text" class="absolute text-xs font-bold">0%</div>
             </div>
         </div>
 
-        <!-- Total Summary Bar (Moved Outside of Top Bar) -->
+        <!-- Total Summary Bar -->
         <div class="bg-[#111]/90 backdrop-blur py-2 px-4 border-b border-gray-800">
             <div class="flex justify-between items-center max-w-md mx-auto">
                 <span class="text-xs uppercase text-gray-500">Sisa Tanggungan</span>
                 <div class="flex items-center gap-2">
                     <span id="grand-total" class="font-tech text-lg text-white">Rp 0</span>
+                    <button onclick="window.toggleCalc()"
+                        class="text-[10px] bg-[#333] border border-gray-600 text-white px-2 py-1 rounded ml-2 hover:bg-[#b026ff] hover:text-black"
+                        title="Kalkulator">
+                        CALC
+                    </button>
                     <button onclick="resetData()"
-                        class="text-[10px] bg-red-900 text-red-100 px-2 py-1 rounded ml-2 hover:bg-red-700">RESET
+                        class="text-[10px] bg-red-900 text-red-100 px-2 py-1 rounded ml-1 hover:bg-red-700">RESET
                         APP</button>
                 </div>
             </div>
@@ -153,15 +158,34 @@
     </div>
 
     <!-- MAIN CONTENT SPACE -->
-    <div class="pt-36 max-w-md mx-auto px-4 pb-24" id="debt-container">
-        <!-- LIST WILL BE INJECTED HERE BY JS -->
+    <div class="pt-36 max-w-md mx-auto px-4 pb-32">
+        <!-- INCOME SECTION -->
+        <div id="income-container" class="hidden"></div>
+
+        <!-- DEBT LIST -->
+        <div id="debt-container">
+            <!-- LIST WILL BE INJECTED HERE BY JS -->
+        </div>
     </div>
 
-    <!-- FLOATING ACTION BUTTON -->
-    <button onclick="openModal()"
-        class="fixed bottom-6 right-6 bg-[#b026ff] text-white w-14 h-14 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(176,38,255,0.6)] hover:scale-110 transition-transform z-40 font-bold text-3xl">
-        +
-    </button>
+    <!-- FLOATING ACTION BUTTONS (BOTTOM LEFT) -->
+    <div class="fixed bottom-6 left-6 z-40 flex flex-col gap-3 items-center">
+        <!-- SWITCH MODE FAB -->
+        <button onclick="toggleMode()" id="fab-switch"
+            class="w-12 h-12 rounded-full bg-gray-800 text-gray-400 border border-gray-600 flex items-center justify-center shadow-lg hover:scale-110 transition-transform hover:text-white group relative">
+            <span class="text-xl">⇄</span>
+            <span
+                class="absolute left-14 bg-black/80 text-white text-[10px] px-2 py-1 rounded hidden group-hover:block whitespace-nowrap border border-gray-700">
+                Ganti Mode
+            </span>
+        </button>
+
+        <!-- ADD DEBT FAB (Main) -->
+        <button onclick="openModal()" id="fab-add"
+            class="bg-[#b026ff] text-white w-14 h-14 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(176,38,255,0.6)] hover:scale-110 transition-transform font-bold text-3xl">
+            +
+        </button>
+    </div>
 
     <!-- MODAL ADD FORM -->
     <div id="add-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm p-4">
@@ -242,11 +266,21 @@
         <div class="text-center w-full max-w-sm">
             <div class="mb-6 flex justify-center">
                 <div
-                    class="w-16 h-16 rounded-full bg-[#1a1a1a] border border-[#b026ff] flex items-center justify-center shadow-[0_0_30px_rgba(176,38,255,0.6)] animate-bounce">
+                    class="w-16 h-16 rounded-full bg-[#1a1a1a] border border-[#b026ff] flex items-center justify-center shadow-[0_0_30px_rgba(176,38,255,0.6)] animate-bounce relative">
                     <svg class="w-8 h-8 text-[#b026ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                     </svg>
+                    <!-- Calc Toggle Btn -->
+                    <button onclick="window.toggleCalc()"
+                        class="absolute -right-12 top-0 bg-[#222] border border-[#b026ff] p-2 rounded-full text-[#b026ff] hover:bg-[#b026ff] hover:text-black transition-all"
+                        title="Buka Kalkulator">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                    </button>
                 </div>
             </div>
             <h1 class="text-3xl font-bold mb-2 text-white">DEBT HUNTER</h1>
@@ -264,6 +298,285 @@
             <p class="mt-4 text-[10px] text-gray-600">Gunakan ID yang SAMA di semua device Anda.</p>
         </div>
     </div>
+
+    <!-- CALCULATOR MODAL -->
+    <div id="calc-modal"
+        class="fixed inset-0 bg-black/60 z-[60] hidden items-end sm:items-center justify-center p-4 backdrop-blur-sm">
+        <div
+            class="bg-[#1a1a1a]/80 backdrop-blur-md w-full max-w-xs rounded-xl overflow-hidden border border-[#333]/50 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+            <!-- Display -->
+            <div class="bg-black/40 p-6 text-right border-b border-[#333]/30">
+                <div id="calc-history" class="text-gray-500 text-xs h-4 font-mono mb-1"></div>
+                <div id="calc-display" class="text-white text-4xl font-tech tracking-widest truncate">0</div>
+            </div>
+
+            <!-- Keypad -->
+            <div class="grid grid-cols-4 gap-1 p-2 bg-black/20">
+                <button onclick="window.calcClear()"
+                    class="col-span-2 bg-[#330000] text-red-200 p-4 rounded text-lg font-bold hover:bg-red-900 active:bg-red-950 transition-colors">AC</button>
+                <button onclick="window.calcDelete()"
+                    class="bg-gray-800 text-white p-4 rounded text-lg font-bold hover:bg-gray-700 active:scale-95 transition-transform">⌫</button>
+                <button onclick="window.calcOp('/')"
+                    class="bg-[#2a0a3d] text-[#d6bcfa] p-4 rounded text-xl font-bold hover:bg-[#b026ff]/30">÷</button>
+
+                <button onclick="window.calcNum('7')"
+                    class="bg-[#222] text-white p-4 rounded text-xl font-bold hover:bg-[#333] active:bg-[#444]">7</button>
+                <button onclick="window.calcNum('8')"
+                    class="bg-[#222] text-white p-4 rounded text-xl font-bold hover:bg-[#333] active:bg-[#444]">8</button>
+                <button onclick="window.calcNum('9')"
+                    class="bg-[#222] text-white p-4 rounded text-xl font-bold hover:bg-[#333] active:bg-[#444]">9</button>
+                <button onclick="window.calcOp('*')"
+                    class="bg-[#2a0a3d] text-[#d6bcfa] p-4 rounded text-xl font-bold hover:bg-[#b026ff]/30">×</button>
+
+                <button onclick="window.calcNum('4')"
+                    class="bg-[#222] text-white p-4 rounded text-xl font-bold hover:bg-[#333] active:bg-[#444]">4</button>
+                <button onclick="window.calcNum('5')"
+                    class="bg-[#222] text-white p-4 rounded text-xl font-bold hover:bg-[#333] active:bg-[#444]">5</button>
+                <button onclick="window.calcNum('6')"
+                    class="bg-[#222] text-white p-4 rounded text-xl font-bold hover:bg-[#333] active:bg-[#444]">6</button>
+                <button onclick="window.calcOp('-')"
+                    class="bg-[#2a0a3d] text-[#d6bcfa] p-4 rounded text-xl font-bold hover:bg-[#b026ff]/30">−</button>
+
+                <button onclick="window.calcNum('1')"
+                    class="bg-[#222] text-white p-4 rounded text-xl font-bold hover:bg-[#333] active:bg-[#444]">1</button>
+                <button onclick="window.calcNum('2')"
+                    class="bg-[#222] text-white p-4 rounded text-xl font-bold hover:bg-[#333] active:bg-[#444]">2</button>
+                <button onclick="window.calcNum('3')"
+                    class="bg-[#222] text-white p-4 rounded text-xl font-bold hover:bg-[#333] active:bg-[#444]">3</button>
+                <button onclick="window.calcOp('+')"
+                    class="bg-[#2a0a3d] text-[#d6bcfa] p-4 rounded text-xl font-bold hover:bg-[#b026ff]/30">+</button>
+
+                <button onclick="window.toggleCalc()"
+                    class="bg-gray-900 text-gray-500 p-4 rounded text-sm font-bold hover:bg-gray-800 border border-gray-800">EXIT</button>
+                <button onclick="window.calcNum('0')"
+                    class="bg-[#222] text-white p-4 rounded text-xl font-bold hover:bg-[#333] active:bg-[#444]">0</button>
+                <button onclick="window.calcNum('.')"
+                    class="bg-[#222] text-white p-4 rounded text-xl font-bold hover:bg-[#333] active:bg-[#444]">.</button>
+                <button onclick="window.calcResult()"
+                    class="bg-[#b026ff] text-white p-4 rounded text-xl font-bold hover:bg-[#9020d0] shadow-[0_0_15px_rgba(176,38,255,0.4)]">=</button>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- UNIFIED UI LOGIC SCRIPT -->
+    <script>
+        // ==========================================
+        // 1. GLOBAL UI FUNCTION EXPORTS
+        // ==========================================
+
+        // --- TAB / MODE SWITCHING ---
+        let currentMode = 'debt';
+
+        window.toggleMode = function () {
+            const debtContainer = document.getElementById('debt-container');
+            const incomeContainer = document.getElementById('income-container');
+            const fabAdd = document.getElementById('fab-add');
+            const fabSwitch = document.getElementById('fab-switch');
+            const headerTitle = document.querySelector('h1.text-xl');
+
+            if (currentMode === 'debt') {
+                // SWITCH TO INCOME
+                currentMode = 'income';
+                if (debtContainer) debtContainer.classList.add('hidden');
+                if (incomeContainer) incomeContainer.classList.remove('hidden');
+
+                // Update FABs
+                if (fabAdd) fabAdd.classList.add('hidden');
+                if (fabSwitch) {
+                    fabSwitch.classList.remove('bg-gray-800', 'text-gray-400');
+                    fabSwitch.classList.add('bg-[#b026ff]', 'text-white', 'shadow-[0_0_15px_#b026ff]');
+                    fabSwitch.innerHTML = '<span class="text-xl">💰</span>';
+                }
+
+                if (headerTitle) headerTitle.innerHTML = 'YOUR <span class="text-[#b026ff]">INCOME</span>';
+
+                if (window.renderIncomeUI) window.renderIncomeUI();
+
+            } else {
+                // SWITCH TO DEBT
+                currentMode = 'debt';
+                if (debtContainer) debtContainer.classList.remove('hidden');
+                if (incomeContainer) incomeContainer.classList.add('hidden');
+
+                // Update FABs
+                if (fabAdd) fabAdd.classList.remove('hidden');
+                if (fabSwitch) {
+                    fabSwitch.classList.add('bg-gray-800', 'text-gray-400');
+                    fabSwitch.classList.remove('bg-[#b026ff]', 'text-white', 'shadow-[0_0_15px_#b026ff]');
+                    fabSwitch.innerHTML = '<span class="text-xl">⇄</span>';
+                }
+
+                if (headerTitle) headerTitle.innerHTML = 'DEBT <span class="text-[#b026ff]">HUNTER</span>';
+            }
+        };
+
+        // --- CALCULATOR LOGIC ---
+        let calcVal = '0';
+        let calcPendingOp = '';
+        let calcHistory = '';
+        let calcNewNum = false;
+        let calcPrevVal = '';
+
+        window.toggleCalc = function () {
+            const el = document.getElementById('calc-modal');
+            if (el) {
+                if (el.classList.contains('hidden')) {
+                    el.classList.remove('hidden');
+                    el.style.display = 'flex'; // Force flex
+                } else {
+                    el.classList.add('hidden');
+                    el.style.display = 'none';
+                }
+            } else {
+                console.error("Calc Modal Not Found");
+            }
+        };
+
+        function updateCalcDisplay() {
+            const display = document.getElementById('calc-display');
+            const history = document.getElementById('calc-history');
+            if (display) display.innerText = Number(calcVal).toLocaleString('id-ID');
+            if (history) history.innerText = calcHistory;
+        }
+
+        window.calcNum = function (n) {
+            if (calcVal === '0' || calcNewNum) {
+                calcVal = n;
+                calcNewNum = false;
+            } else {
+                calcVal += n;
+            }
+            updateCalcDisplay();
+        };
+
+        window.calcOp = function (op) {
+            calcHistory = calcVal + ' ' + (op === '*' ? '×' : op === '/' ? '÷' : op);
+            calcPendingOp = op;
+            calcPrevVal = calcVal;
+            calcNewNum = true;
+            updateCalcDisplay();
+        };
+
+        window.calcResult = function () {
+            if (!calcPendingOp) return;
+            try {
+                const prev = parseFloat(calcPrevVal);
+                const current = parseFloat(calcVal);
+                let res = 0;
+                if (calcPendingOp === '+') res = prev + current;
+                if (calcPendingOp === '-') res = prev - current;
+                if (calcPendingOp === '*') res = prev * current;
+                if (calcPendingOp === '/') res = prev / current;
+
+                calcVal = String(res);
+                calcHistory = '';
+                calcPendingOp = '';
+                calcPrevVal = '';
+                calcNewNum = true;
+                updateCalcDisplay();
+            } catch (e) { calcVal = 'Error'; }
+        };
+
+        window.calcClear = function () {
+            calcVal = '0';
+            calcHistory = '';
+            calcPendingOp = '';
+            updateCalcDisplay();
+        };
+
+        window.calcDelete = function () {
+            if (calcVal.length > 1) {
+                calcVal = calcVal.slice(0, -1);
+            } else {
+                calcVal = '0';
+            }
+            updateCalcDisplay();
+        };
+
+
+        // --- INCOME FUNCTIONS ---
+        window.editTarget = function () {
+            if (!manajerPendapatan) return alert("System Loading...");
+            const currentTarget = manajerPendapatan.target;
+            const newTarget = prompt("Masukkan Target Harian Baru (Rp):", currentTarget);
+
+            if (newTarget && !isNaN(newTarget)) {
+                manajerPendapatan.setTarget(newTarget);
+                saveData();
+                window.renderIncomeUI();
+            }
+        };
+
+        window.manualResetIncome = function () {
+            if (confirm("Reset Pendapatan Harian jadi Rp 0?")) {
+                manajerPendapatan.resetCurrent();
+                saveData(); // Explicit save for persistence
+                window.renderIncomeUI();
+            }
+        };
+
+        window.handleIncomeSubmit = function (e) {
+            e.preventDefault();
+            const input = document.getElementById('income-input');
+            const val = parseInt(input.value);
+            if (val > 0) {
+                manajerPendapatan.tambahPendapatan(val);
+                saveData();
+                window.renderIncomeUI();
+                renderUI();
+                input.value = '';
+            }
+        };
+
+        window.renderIncomeUI = function () {
+            if (!manajerPendapatan) return;
+            const data = manajerPendapatan.getProgress();
+            const container = document.getElementById('income-container');
+            if (!container) return;
+
+            const currentRp = data.current.toLocaleString('id-ID');
+            const targetRp = data.target.toLocaleString('id-ID');
+
+            // Use window.editTarget() in onclick to ensure it finds the global function
+            container.innerHTML = `
+                <div class="game-card p-4 rounded-lg mb-6 border border-[#b026ff]/30 shadow-[0_0_15px_rgba(176,38,255,0.15)] relative overflow-hidden">
+                   <div class="absolute -right-4 -top-4 w-24 h-24 bg-[#b026ff]/10 rounded-full blur-xl"></div>
+                    <div class="flex justify-between items-center mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xl">💰</span>
+                            <h2 class="font-bold text-[#b026ff] tracking-wider text-sm">PENDAPATAN HARIAN</h2>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <button type="button" onclick="window.manualResetIncome()" class="text-[10px] text-red-500 hover:text-red-300 underline z-10 relative">
+                                RESET
+                            </button>
+                            <button type="button" onclick="window.editTarget()" class="text-[10px] text-gray-500 hover:text-white underline z-10 relative">
+                                SET TARGET
+                            </button>
+                        </div>
+                    </div>
+                    <div class="text-center mb-4">
+                        <div class="text-3xl font-bold text-white font-tech tracking-widest">Rp ${currentRp}</div>
+                        <div class="text-xs text-gray-400 mt-1">Target: Rp ${targetRp}</div>
+                    </div>
+                    <div class="w-full bg-gray-800 h-3 rounded-full overflow-hidden mb-4 border border-gray-700">
+                        <div class="h-full bg-gradient-to-r from-blue-500 to-[#b026ff] transition-all duration-700 relative" style="width: ${data.percent}%">
+                            <div class="absolute right-0 top-0 h-full w-1 bg-white/50 blur-[1px]"></div>
+                        </div>
+                    </div>
+                    <form onsubmit="window.handleIncomeSubmit(event)" class="flex gap-2">
+                        <input type="number" id="income-input" placeholder="0" required
+                            class="flex-1 bg-[#111] border border-[#333] rounded px-3 py-2 text-white text-sm focus:border-[#b026ff] outline-none font-tech">
+                        <button type="submit" class="bg-[#222] hover:bg-[#b026ff] hover:text-white text-[#b026ff] border border-[#b026ff] px-4 py-2 rounded text-sm font-bold transition-all">
+                            +
+                        </button>
+                    </form>
+                </div>
+            `;
+        };
+
+    </script>
 
     <!-- SCRIPT -->
     <script src="app.js"></script>
@@ -304,6 +617,7 @@
 
         // 2. RENDER FUNGSI UTAMA
         function renderUI() {
+            renderIncomeUI(); // Also render Income UI
             container.innerHTML = ''; // Kosongkan dulu
             const sortedSources = aplikasiSaya.getSortedSources();
             const stats = aplikasiSaya.hasilkanTotal();
@@ -422,16 +736,13 @@
 
         // === LOGIC INTERAKSI ===
 
+        // === LOGIC INTERAKSI ===
+
         function toggleAccordion(sourceId) {
-            // Cari sumber berdasarkan ID, bukan index array -> FIXED
             const target = aplikasiSaya.semuaSumber.find(s => s.id === sourceId);
             if (!target) return;
 
-            // Tutup semua yang lain (biar rapi)
-            aplikasiSaya.semuaSumber.forEach(s => {
-                if (s.id !== sourceId) s.isExpanded = false;
-            });
-
+            // REMOVED AUTO-CLOSE LOGIC - User wants to open multiple tabs
             // Toggle yang diklik
             target.isExpanded = !target.isExpanded;
             saveData(); // Sync to Cloud
@@ -441,6 +752,7 @@
         function bayarCicilan(sourceId, cicilanId) {
             const sumber = aplikasiSaya.semuaSumber.find(s => s.id === sourceId);
             if (!sumber) return;
+            // ... (rest of function)
 
             const cicilan = sumber.daftarCicilan.find(c => c.id === cicilanId);
 
@@ -555,16 +867,24 @@
         function handleLogin(e) {
             e.preventDefault();
             const userId = document.getElementById('login-id').value.trim().replace(/\s+/g, '_').toUpperCase();
-            if (userId && userId.length > 3) {
-                // Save ID
-                localStorage.setItem(SAVED_ID_KEY, userId);
 
-                // Initialize App
-                initApp(userId);
-                document.getElementById('login-modal').classList.add('hidden');
-            } else {
+            if (!userId || userId.length < 4) {
                 alert("ID terlalu pendek! Minimal 4 huruf.");
+                return;
             }
+
+            // CHECK FIREBASE READINESS
+            if (!window.firebaseLib) {
+                alert("Sistem sedang memuat... Tunggu 2 detik dan coba lagi.");
+                return;
+            }
+
+            // Save ID
+            localStorage.setItem(SAVED_ID_KEY, userId);
+
+            // Initialize App
+            initApp(userId);
+            document.getElementById('login-modal').classList.add('hidden');
         }
 
         function hapusHutang(sourceId) {
