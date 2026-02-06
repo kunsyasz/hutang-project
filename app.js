@@ -1,60 +1,110 @@
 /**
  * ==========================================
- * APLIKASI PENGELOLA HUTANG - MODE GAME
+ * APLIKASI PENGELOLA HUTANG - MODE CLOUD GAME
  * ==========================================
  */
 
 // ==========================================
-// STORE & UTILS
+// FIREBASE CONFIGURATION (YOU MUST FILL THIS)
 // ==========================================
-const STORAGE_KEY = 'DEBT_HUNTER_DATA_V1';
+const firebaseConfig = {
+    apiKey: "AIzaSyAMFhfNrUbSU8lf_k8KMujHMmWpclpT5wI",
+    authDomain: "hutang-projecta.firebaseapp.com",
+    databaseURL: "https://hutang-projecta-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "hutang-projecta",
+    storageBucket: "hutang-projecta.firebasestorage.app",
+    messagingSenderId: "707653256428",
+    appId: "1:707653256428:web:f3ae1ad279dd2e8e4711c9",
+    measurementId: "G-CJ54YDDEP9"
+};
+
+let db; // Database instance
+let userPath = null; // Path data user: users/NAMA_USER
+
+// ==========================================
+// INIT APP (Called after Login)
+// ==========================================
+function initApp(userId) {
+    try {
+        const { initializeApp, getDatabase, ref, set, onValue } = window.firebaseLib;
+        const app = initializeApp(firebaseConfig);
+        db = getDatabase(app);
+
+        userPath = `users/${userId}`;
+        console.log(`Connected as ${userId}`);
+
+        // Listen to Realtime Data
+        const dataRef = ref(db, userPath);
+        onValue(dataRef, (snapshot) => {
+            const data = snapshot.val();
+            // Update Sync Status Color
+            document.getElementById('sync-status').classList.remove('bg-red-500');
+            document.getElementById('sync-status').classList.add('bg-green-500');
+            document.getElementById('sync-status').title = "Online & Synced";
+
+            if (data) {
+                // Reconstruct Objects with Methods
+                aplikasiSaya.semuaSumber = data.map(sData => {
+                    const s = new SumberHutang(sData.namaSumber);
+                    s.id = sData.id;
+                    s.isExpanded = sData.isExpanded || false; // Sync expanded state too!
+                    s.daftarCicilan = (sData.daftarCicilan || []).map(cData => {
+                        const c = new Cicilan(cData.id, cData.bulanKe, cData.tanggalJatuhTempo, cData.nominal, cData.sudahLunas);
+                        c.tanggalDibayar = cData.tanggalDibayar ? new Date(cData.tanggalDibayar) : null;
+                        return c;
+                    });
+                    return s;
+                });
+            } else {
+                aplikasiSaya.semuaSumber = []; // Jika data kosong di cloud
+            }
+            renderUI();
+        }, (error) => {
+            console.error("Sync Error:", error);
+            document.getElementById('sync-status').classList.add('bg-red-500');
+            alert("Error Koneksi Database: Cek Konfigurasi Firebase!");
+        });
+
+    } catch (e) {
+        console.error(e);
+        alert("Gagal inisialisasi Firebase. Pastikan Config sudah benar di app.js!");
+    }
+}
 
 function saveData() {
+    if (!db || !userPath) return;
+
+    // Convert Objects to JSON-friendly (remove methods)
     const data = aplikasiSaya.semuaSumber.map(s => ({
         id: s.id,
         namaSumber: s.namaSumber,
+        isExpanded: s.isExpanded,
         daftarCicilan: s.daftarCicilan.map(c => ({
             id: c.id,
             bulanKe: c.bulanKe,
-            tanggalJatuhTempo: c.tanggalJatuhTempo,
+            tanggalJatuhTempo: c.tanggalJatuhTempo ? c.tanggalJatuhTempo.toISOString() : null, // Store as String
             nominal: c.nominal,
             sudahLunas: c.sudahLunas,
-            tanggalDibayar: c.tanggalDibayar || null // New field
+            tanggalDibayar: c.tanggalDibayar ? c.tanggalDibayar.toISOString() : null
         }))
     }));
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-}
 
-function loadData() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return false;
-
-    const data = JSON.parse(raw);
-    aplikasiSaya.semuaSumber = data.map(sData => {
-        const s = new SumberHutang(sData.namaSumber);
-        s.id = sData.id;
-        s.daftarCicilan = sData.daftarCicilan.map(cData => {
-            const c = new Cicilan(cData.id, cData.bulanKe, cData.tanggalJatuhTempo, cData.nominal, cData.sudahLunas);
-            c.tanggalDibayar = cData.tanggalDibayar ? new Date(cData.tanggalDibayar) : null;
-            return c;
-        });
-        return s;
-    });
-    return true;
+    const { ref, set } = window.firebaseLib;
+    set(ref(db, userPath), data);
 }
 
 // ==========================================
-// MODELS
+// MODELS (Modified for Sync)
 // ==========================================
 
 class Cicilan {
     constructor(id, bulanKe, tanggalJatuhTempo, nominal, sudahLunas) {
         this.id = id;
         this.bulanKe = bulanKe;
-        this.tanggalJatuhTempo = new Date(tanggalJatuhTempo);
+        this.tanggalJatuhTempo = new Date(tanggalJatuhTempo); // Auto parse ISO string
         this.nominal = nominal;
         this.sudahLunas = sudahLunas;
-        this.tanggalDibayar = null; // Track kapan dibayar
+        this.tanggalDibayar = null;
     }
 }
 
@@ -74,8 +124,6 @@ class SumberHutang {
     }
 
     getTanggalTerdekat() {
-        // Logika baru: Cari yang belum lunas OR yang lunas tapi baru HARI INI (masih bisa di-undo)
-        // Tapi untuk sorting urgency, kita tetap hanya lihat yang murni belum lunas.
         const belumLunas = this.daftarCicilan.find(c => !c.sudahLunas);
         if (!belumLunas) return new Date('9999-12-31');
         return belumLunas.tanggalJatuhTempo;
@@ -88,8 +136,6 @@ class SumberHutang {
     }
 
     getProgress() {
-        // Hitung total cicilan (all time) VS yang sudah lunas PERMANEN
-        // Tapi user ingin lihat progress visual. Mari kita anggap yang "baru bayar hari ini" juga dihitung lunas buat progress circular.
         const total = this.daftarCicilan.length;
         const lunas = this.daftarCicilan.filter(c => c.sudahLunas).length;
         return { lunas, total, persentase: total === 0 ? 100 : (lunas / total) * 100 };
@@ -132,98 +178,55 @@ class PengelolaHutang {
         };
     }
 
-    // Check Status Cicilan: Apakah harus disembunyikan?
-    // Aturan: Sembunyi JIKA (Sudah Lunas) DAN (Tanggal Bayar < Hari Ini)
     shouldHide(cicilan) {
-        if (!cicilan.sudahLunas) return false; // Belum lunas -> Tampilkan
-        if (!cicilan.tanggalDibayar) return true; // Lunas tapi ga ada tanggal (data lama) -> Sembunyikan (anggap lunas lama)
-
+        if (!cicilan.sudahLunas) return false;
+        if (!cicilan.tanggalDibayar) return true;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-
         const payDate = new Date(cicilan.tanggalDibayar);
         payDate.setHours(0, 0, 0, 0);
-
-        // Return true (hide) if payDate is BEFORE today
         return payDate < today;
     }
 
-    // FEATURE: Tambah Sumber dengan generator cicilan otomatis
     tambahSumberOtomatis(nama, jumlahBulan, startTanggal, nominal) {
         const sumberBaru = new SumberHutang(nama);
         const startDate = new Date(startTanggal);
-
         for (let i = 1; i <= jumlahBulan; i++) {
-            // Clone tanggal agar tidak refer ke object yang sama
             let dueDate = new Date(startDate);
-            // Tambah bulan: kalau i=1 jan, i=2 feb, dst.
-            // Tapi karena startTanggal adalah bulan pertama, kita loop logicnya:
-            // Bulan ke-1 = startTanggal
-            // Bulan ke-2 = startTanggal + 1 bulan
             dueDate.setMonth(startDate.getMonth() + (i - 1));
-
             sumberBaru.tambahCicilan(i, dueDate, nominal, false);
         }
-
         this.tambahSumber(sumberBaru);
         return sumberBaru;
     }
 
-    // FEATURE: Edit Cicilan (Nominal & Tanggal)
     updateCicilan(sourceId, cicilanId, nominalBaru, tanggalBaru) {
         const sumber = this.semuaSumber.find(s => s.id === sourceId);
         if (!sumber) return;
-
         const cicilan = sumber.daftarCicilan.find(c => c.id === cicilanId);
         if (cicilan) {
             cicilan.nominal = parseInt(nominalBaru);
-
-            // Update Tanggal
             if (tanggalBaru) {
                 cicilan.tanggalJatuhTempo = new Date(tanggalBaru);
-                // RE-SORTING PENTING: Karena tanggal berubah, urutan mungkin berubah
                 sumber.daftarCicilan.sort((a, b) => a.tanggalJatuhTempo - b.tanggalJatuhTempo);
             }
         }
     }
 
-    // FEATURE: Reset Data (Clear All)
     resetAllData() {
-        // Hapus semua data di memory
+        // Hapus data di Cloud
+        if (db && userPath) {
+            const { ref, set } = window.firebaseLib;
+            set(ref(db, userPath), null); // Set NULL to delete
+        }
         this.semuaSumber = [];
-        // Simpan array kosong ke localStorage
-        // PENTING: Jangan removeItem, tapi setItem '[]' agar loadData() tidak menganggap ini user baru.
-        localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
-        location.reload();
+        renderUI();
     }
 }
 
 // ==========================================
-// INIT DATA
+// INIT INSTANCE
 // ==========================================
 const aplikasiSaya = new PengelolaHutang();
 
-// Coba load dari localStorage dulu
-if (!loadData()) {
-    // Kalau kosong (pengguna baru), buat data dummy
-    // UPDATE: Start 0% (Semua belum lunas)
-
-    // Musuh 1
-    const gopay = new SumberHutang("MUSUH A (Gopay)");
-    gopay.tambahCicilan(1, "2026-02-10", 59250, false);
-    gopay.tambahCicilan(2, "2026-03-10", 59250, false);
-
-    // Musuh 2
-    const dana = new SumberHutang("MUSUH B (Dana)");
-    dana.tambahCicilan(1, "2026-02-13", 33605, false);
-
-    // Musuh 3
-    const tiktok = new SumberHutang("MUSUH C (TikTok)");
-    tiktok.tambahCicilan(1, "2026-03-01", 73605, false);
-
-    aplikasiSaya.tambahSumber(gopay);
-    aplikasiSaya.tambahSumber(dana);
-    aplikasiSaya.tambahSumber(tiktok);
-
-    saveData(); // Simpan init data
-}
+// Note: loadData() and localStorage logic are completely replaced by Firebase Sync logic above.
