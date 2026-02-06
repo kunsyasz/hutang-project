@@ -43,11 +43,26 @@ function initApp(userId) {
             document.getElementById('sync-status').title = "Online & Synced";
 
             if (data) {
-                // Reconstruct Objects with Methods
-                aplikasiSaya.semuaSumber = data.map(sData => {
+                // MIGRATION LOGIC: Check if data is Array (Old) or Object (New)
+                let debtsData = [];
+                let incomeData = null;
+
+                if (Array.isArray(data)) {
+                    // OLD FORMAT: Root is Array
+                    console.log("Migrating Old Data...");
+                    debtsData = data;
+                    incomeData = { target: 200000, current: 0, lastDate: new Date().toDateString() }; // Default
+                } else if (data.debts || data.income) {
+                    // NEW FORMAT
+                    debtsData = data.debts || [];
+                    incomeData = data.income;
+                }
+
+                // Load Debts
+                aplikasiSaya.semuaSumber = (debtsData || []).map(sData => {
                     const s = new SumberHutang(sData.namaSumber);
                     s.id = sData.id;
-                    s.isExpanded = sData.isExpanded || false; // Sync expanded state too!
+                    s.isExpanded = sData.isExpanded || false;
                     s.daftarCicilan = (sData.daftarCicilan || []).map(cData => {
                         const c = new Cicilan(cData.id, cData.bulanKe, cData.tanggalJatuhTempo, cData.nominal, cData.sudahLunas);
                         c.tanggalDibayar = cData.tanggalDibayar ? new Date(cData.tanggalDibayar) : null;
@@ -55,8 +70,16 @@ function initApp(userId) {
                     });
                     return s;
                 });
+
+                // Load Income
+                if (incomeData) {
+                    manajerPendapatan.loadData(incomeData);
+                }
+
             } else {
-                aplikasiSaya.semuaSumber = []; // Jika data kosong di cloud
+                // DATA KOSONG / PENGGUNA BARU
+                aplikasiSaya.semuaSumber = [];
+                manajerPendapatan.reset();
             }
             renderUI();
         }, (error) => {
@@ -74,28 +97,100 @@ function initApp(userId) {
 function saveData() {
     if (!db || !userPath) return;
 
-    // Convert Objects to JSON-friendly (remove methods)
-    const data = aplikasiSaya.semuaSumber.map(s => ({
+    // 1. Prepare Debts Data
+    const debts = aplikasiSaya.semuaSumber.map(s => ({
         id: s.id,
         namaSumber: s.namaSumber,
         isExpanded: s.isExpanded,
         daftarCicilan: s.daftarCicilan.map(c => ({
             id: c.id,
             bulanKe: c.bulanKe,
-            tanggalJatuhTempo: c.tanggalJatuhTempo ? c.tanggalJatuhTempo.toISOString() : null, // Store as String
+            tanggalJatuhTempo: c.tanggalJatuhTempo ? c.tanggalJatuhTempo.toISOString() : null,
             nominal: c.nominal,
             sudahLunas: c.sudahLunas,
             tanggalDibayar: c.tanggalDibayar ? c.tanggalDibayar.toISOString() : null
         }))
     }));
 
+    // 2. Prepare Income Data
+    const income = manajerPendapatan.getData();
+
+    // 3. Save as Object
+    const payload = {
+        debts: debts,
+        income: income
+    };
+
     const { ref, set } = window.firebaseLib;
-    set(ref(db, userPath), data);
+    set(ref(db, userPath), payload);
 }
 
 // ==========================================
-// MODELS (Modified for Sync)
+// MODELS
 // ==========================================
+
+class PendapatanManager {
+    constructor() {
+        this.target = 200000;
+        this.current = 0;
+        this.lastDate = new Date().toDateString(); // "Fri Feb 06 2026"
+    }
+
+    loadData(data) {
+        this.target = data.target || 200000;
+        this.current = data.current || 0;
+        this.lastDate = data.lastDate || new Date().toDateString();
+
+        this.checkDailyReset();
+    }
+
+    checkDailyReset() {
+        const today = new Date().toDateString();
+        if (this.lastDate !== today) {
+            console.log("New Day! Resetting Income...");
+            this.current = 0;
+            this.lastDate = today;
+            // No need to save immediately, will save on next interaction
+        }
+    }
+
+    tambahPendapatan(amount) {
+        this.current += parseInt(amount);
+        this.checkDailyReset(); // Ensure date is correct
+    }
+
+    setTarget(amount) {
+        this.target = parseInt(amount);
+    }
+
+    getData() {
+        return {
+            target: this.target,
+            current: this.current,
+            lastDate: this.lastDate
+        };
+    }
+
+    getProgress() {
+        const percent = this.target === 0 ? 0 : (this.current / this.target) * 100;
+        return {
+            current: this.current,
+            target: this.target,
+            percent: Math.min(100, Math.max(0, percent))
+        };
+    }
+
+    resetCurrent() {
+        this.current = 0;
+        this.lastDate = new Date().toDateString();
+    }
+
+    reset() {
+        this.target = 200000;
+        this.current = 0;
+        this.lastDate = new Date().toDateString();
+    }
+}
 
 class Cicilan {
     constructor(id, bulanKe, tanggalJatuhTempo, nominal, sudahLunas) {
@@ -227,6 +322,7 @@ class PengelolaHutang {
             set(ref(db, userPath), null); // Set NULL to delete
         }
         this.semuaSumber = [];
+        manajerPendapatan.reset();
         renderUI();
     }
 }
@@ -234,6 +330,9 @@ class PengelolaHutang {
 // ==========================================
 // INIT INSTANCE
 // ==========================================
-const aplikasiSaya = new PengelolaHutang();
-
-// Note: loadData() and localStorage logic are completely replaced by Firebase Sync logic above.
+// Use var or attach to window to ensure global access for inline onclick handlers
+window.aplikasiSaya = new PengelolaHutang();
+window.manajerPendapatan = new PendapatanManager();
+// Alias for backward compat if needed (though window.x is accessible as x)
+const aplikasiSaya = window.aplikasiSaya;
+const manajerPendapatan = window.manajerPendapatan;
