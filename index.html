@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debt Hunter: Level 1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --neon-green: #b026ff;
+            /* Was #00ff41 */
+            --dark-bg: #0d0d0d;
+            --card-bg: #1a1a1a;
+            --danger: #ff3333;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            padding: 0;
+            margin: 0;
+        }
+
+        .font-tech {
+            font-family: 'Share Tech Mono', monospace;
+        }
+
+        /* CARD STYLING */
+        .game-card {
+            background: var(--card-bg);
+            border: 1px solid #333;
+            border-left: 4px solid var(--neon-green);
+            transition: all 0.3s ease;
+        }
+
+        .game-card.expanded {
+            box-shadow: 0 0 15px rgba(176, 38, 255, 0.3);
+            border-color: var(--neon-green);
+        }
+
+        /* CHECKBOX CUSTOM */
+        .custom-checkbox input:checked+div {
+            background-color: var(--neon-green);
+            border-color: var(--neon-green);
+        }
+
+        .custom-checkbox input:checked+div svg {
+            display: block;
+        }
+
+        /* PROGRESS CIRCLE */
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.5s ease-in-out;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        /* ANIMATION */
+        .fade-out {
+            opacity: 0;
+            transform: translateX(100px);
+            transition: all 0.5s ease;
+        }
+    </style>
+</head>
+
+<body class="pb-20">
+
+    <!-- HEADER STATUS -->
+    <div class="fixed top-0 w-full bg-black/90 backdrop-blur border-b border-gray-800 z-50">
+        <div class="p-4 flex justify-between items-center max-w-md mx-auto">
+            <div class="flex items-center gap-3">
+                <!-- SVG LOGO -->
+                <div
+                    class="w-12 h-12 rounded-full bg-[#1a1a1a] border border-[#b026ff] flex items-center justify-center shadow-[0_0_15px_rgba(176,38,255,0.4)]">
+                    <svg class="w-7 h-7 text-[#b026ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <div id="realtime-date" class="text-white text-[10px] font-tech mb-0.5">...</div>
+                    <h1 class="text-xl font-bold tracking-wider leading-none">DEBT <span
+                            class="text-[#b026ff]">HUNTER</span></h1>
+                    <div class="text-gray-500 text-[10px] tracking-widest">KUNSY STATUS: <span
+                            class="text-red-500 font-bold">BERHUTANG</span></div>
+                </div>
+            </div>
+
+            <!-- Circular Progress -->
+            <div class="relative w-16 h-16 flex items-center justify-center">
+                <svg class="w-full h-full" viewBox="0 0 100 100">
+                    <circle class="text-gray-800 stroke-current" stroke-width="8" cx="50" cy="50" r="40"
+                        fill="transparent"></circle>
+                    <circle id="progress-circle" class="text-[#b026ff] progress-ring__circle stroke-current"
+                        stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent"
+                        stroke-dasharray="251.2" stroke-dashoffset="0"></circle>
+                </svg>
+                <div id="progress-text" class="absolute text-xs font-bold">0%</div>
+            </div>
+        </div>
+
+        <!-- Total Summary Bar -->
+        <div class="bg-[#111] py-2 px-4 flex justify-between items-center max-w-md mx-auto border-b border-gray-800">
+            <span class="text-xs uppercase text-gray-500">Sisa Tanggungan</span>
+            <div class="flex items-center gap-2">
+                <span id="grand-total" class="font-tech text-lg text-white">Rp 0</span>
+                <button onclick="resetData()"
+                    class="text-[10px] bg-red-900 text-red-100 px-2 py-1 rounded ml-2 hover:bg-red-700">RESET
+                    APP</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT SPACE -->
+    <div class="pt-36 max-w-md mx-auto px-4 pb-24" id="debt-container">
+        <!-- LIST WILL BE INJECTED HERE BY JS -->
+    </div>
+
+    <!-- FLOATING ACTION BUTTON -->
+    <button onclick="openModal()"
+        class="fixed bottom-6 right-6 bg-[#b026ff] text-white w-14 h-14 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(176,38,255,0.6)] hover:scale-110 transition-transform z-40 font-bold text-3xl">
+        +
+    </button>
+
+    <!-- MODAL ADD FORM -->
+    <div id="add-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm p-4">
+        <div class="bg-[#1a1a1a] border border-[#333] p-6 rounded-lg w-full max-w-sm shadow-[0_0_30px_rgba(0,0,0,0.8)]">
+            <h2 class="text-xl font-bold mb-4 text-[#b026ff] font-tech">// TAMBAH MUSUH BARU</h2>
+
+            <form onsubmit="handleFormSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">NAMA SUMBER / APLIKASI</label>
+                    <input type="text" id="input-nama" required
+                        class="w-full bg-black border border-gray-700 p-3 rounded text-white focus:border-[#b026ff] outline-none"
+                        placeholder="Contoh: Shopee Paylater">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">TOTAL CICILAN (BULAN)</label>
+                        <input type="number" id="input-bulan" required min="1" value="1"
+                            class="w-full bg-black border border-gray-700 p-3 rounded text-white focus:border-[#b026ff] outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-500 mb-1">NOMINAL DEFAULT (Rp)</label>
+                        <input type="number" id="input-nominal" required
+                            class="w-full bg-black border border-gray-700 p-3 rounded text-white focus:border-[#b026ff] outline-none"
+                            placeholder="500000">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">TANGGAL JATUH TEMPO PERTAMA</label>
+                    <input type="date" id="input-tanggal" required
+                        class="w-full bg-black border border-gray-700 p-3 rounded text-white focus:border-[#b026ff] outline-none">
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="closeModal()"
+                        class="flex-1 py-3 border border-gray-600 rounded hover:bg-gray-800 text-gray-400">BATAL</button>
+                    <button type="submit"
+                        class="flex-1 py-3 bg-[#b026ff] text-black font-bold rounded hover:bg-[#9020d0] shadow-lg">SIMPAN</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT FORM -->
+    <div id="edit-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 backdrop-blur-sm p-4">
+        <div class="bg-[#1a1a1a] border border-[#333] p-6 rounded-lg w-full max-w-sm shadow-[0_0_30px_rgba(0,0,0,0.8)]">
+            <h2 class="text-xl font-bold mb-4 text-[#b026ff] font-tech">// EDIT CICILAN</h2>
+
+            <form onsubmit="handleEditSubmit(event)" class="space-y-4">
+                <input type="hidden" id="edit-source-id">
+                <input type="hidden" id="edit-cicilan-id">
+
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">TANGGAL JATUH TEMPO</label>
+                    <input type="date" id="edit-tanggal" required
+                        class="w-full bg-black border border-gray-700 p-3 rounded text-white focus:border-[#b026ff] outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-500 mb-1">NOMINAL (Rp)</label>
+                    <input type="number" id="edit-nominal" required
+                        class="w-full bg-black border border-gray-700 p-3 rounded text-white focus:border-[#b026ff] outline-none">
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="closeEditModal()"
+                        class="flex-1 py-3 border border-gray-600 rounded hover:bg-gray-800 text-gray-400">BATAL</button>
+                    <button type="submit"
+                        class="flex-1 py-3 bg-[#b026ff] text-black font-bold rounded hover:bg-[#9020d0] shadow-lg">UPDATE</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SCRIPT -->
+    <script src="app.js"></script>
+    <script>
+        // === UI LOGIC ===
+
+        const container = document.getElementById('debt-container');
+        const dateEl = document.getElementById('realtime-date');
+        const circle = document.getElementById('progress-circle');
+        const progressText = document.getElementById('progress-text');
+        const grandTotalEl = document.getElementById('grand-total');
+        const modal = document.getElementById('add-modal');
+        const editModal = document.getElementById('edit-modal');
+
+        const CIRCUMFERENCE = 2 * Math.PI * 40; // 251.2
+
+        // 1. UPDATE REALTIME DATE
+        function updateTime() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            dateEl.innerText = now.toLocaleDateString('id-ID', options) + " | " + now.toLocaleTimeString('id-ID');
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        // 2. RENDER FUNGSI UTAMA
+        function renderUI() {
+            container.innerHTML = ''; // Kosongkan dulu
+            const sortedSources = aplikasiSaya.getSortedSources();
+            const stats = aplikasiSaya.hasilkanTotal();
+
+            // Update Header Stats
+            grandTotalEl.innerText = `Rp ${stats.sisaUang.toLocaleString('id-ID')}`;
+            const offset = CIRCUMFERENCE - (stats.persenGlobal / 100) * CIRCUMFERENCE;
+            circle.style.strokeDashoffset = offset;
+            progressText.innerText = Math.round(stats.persenGlobal) + "%";
+
+            // Render List Items (Musuh)
+            let visibleCount = 0; // Hitung cicilan yg tampil untuk styling
+
+            sortedSources.forEach((sumber) => { // Hapus index dari parameter karena tidak aman dipakai saat sorting
+                const sisa = sumber.hitungSisa();
+
+                // Cari musuh ini di array asli untuk cek status expanded yang up-to-date
+                // (Sebenarnya objectnya sama reference, tapi kita perlu ID buat fungsi toggle)
+
+                const nextJatuhTempo = sumber.getTanggalTerdekat();
+                const isUrgent = nextJatuhTempo < new Date(new Date().setDate(new Date().getDate() + 7)); // < 7 hari
+
+                // Card Wrapper
+                const card = document.createElement('div');
+                card.className = `game-card mb-4 rounded-lg overflow-hidden ${sumber.isExpanded ? 'expanded' : ''}`;
+
+                // 1. HEADER (Clickable)
+                const header = document.createElement('div');
+                header.className = "p-4 cursor-pointer flex justify-between items-center bg-[#222] hover:bg-[#2a2a2a]";
+                // PASS ID, JANGAN PASS INDEX
+                header.onclick = () => toggleAccordion(sumber.id);
+
+                const dateDisplay = nextJatuhTempo.getFullYear() === 9999 ? "LUNAS SEMUA" : nextJatuhTempo.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+
+                header.innerHTML = `
+                    <div>
+                        <div class="text-[10px] uppercase tracking-widest ${isUrgent ? 'text-red-500 font-bold' : 'text-gray-500'}">
+                            ${isUrgent && sisa > 0 ? '⚠ WARNING: ' : ''} Jatuh Tempo: ${dateDisplay}
+                        </div>
+                        <div class="font-bold text-lg">${sumber.namaSumber}</div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-white font-tech text-sm">Rp ${sisa.toLocaleString('id-ID')}</div>
+                        <div class="text-xs text-gray-500">${sumber.isExpanded ? '▲ Tutup' : '▼ Buka'}</div>
+                    </div>
+                `;
+
+                // 2. DETAIL LIST (Cicilan)
+                const detail = document.createElement('div');
+                detail.className = `bg-black border-t border-gray-800 transition-all duration-300 ${sumber.isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`;
+
+                // Render tiap cicilan
+                sumber.daftarCicilan.forEach((cicilan) => {
+                    // FITUR BARU: Hide kalau lunas kemarin/lampau
+                    if (aplikasiSaya.shouldHide(cicilan)) return;
+
+                    visibleCount++;
+
+                    const row = document.createElement('div');
+                    row.className = `p-3 border-b border-gray-900 flex justify-between items-center ${cicilan.sudahLunas ? 'bg-[#b026ff]/10' : ''}`;
+
+                    const tgl = cicilan.tanggalJatuhTempo.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+
+                    // Style coret kalau lunas
+                    const textStyle = cicilan.sudahLunas ? 'line-through text-gray-600' : 'text-gray-400';
+                    const nominalStyle = cicilan.sudahLunas ? 'text-gray-600' : 'text-white';
+
+                    row.innerHTML = `
+                        <div class="flex-1">
+                            <div class="text-xs ${textStyle}">Cicilan ke-${cicilan.bulanKe} • ${tgl}</div>
+                            <div class="flex items-center gap-2">
+                                <span class="font-bold ${nominalStyle}">Rp ${cicilan.nominal.toLocaleString('id-ID')}</span>
+                                ${!cicilan.sudahLunas ? `
+                                    <button onclick="editCicilan('${sumber.id}', '${cicilan.id}')" class="text-gray-500 hover:text-[#b026ff] text-[10px] border border-gray-700 px-1 rounded">
+                                        ✏ EDIT
+                                    </button>
+                                ` : ''}
+                            </div>
+                            ${cicilan.sudahLunas ? '<div class="text-[10px] text-[#b026ff]">LUNAS HARI INI (Besok akan hilang)</div>' : ''}
+                        </div>
+                        
+                        <label class="custom-checkbox cursor-pointer relative flex items-center">
+                            <input type="checkbox" class="sr-only" 
+                                ${cicilan.sudahLunas ? 'checked' : ''} 
+                                onchange="bayarCicilan('${sumber.id}', '${cicilan.id}')">
+                            <div class="w-8 h-8 rounded border-2 border-gray-600 flex items-center justify-center transition-colors hover:border-[#b026ff]">
+                                <!-- Check Icon -->
+                                <svg class="w-5 h-5 text-black hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                            </div>
+                        </label>
+                    `;
+                    detail.appendChild(row);
+                });
+
+                if (visibleCount === 0 && !sumber.isExpanded) {
+                    // Optional: Kalau semua hidden/lunas lama, kasih info
+                }
+
+                card.appendChild(header);
+                card.appendChild(detail);
+                container.appendChild(card);
+            });
+        }
+
+        // === LOGIC INTERAKSI ===
+
+        function toggleAccordion(sourceId) {
+            // Cari sumber berdasarkan ID, bukan index array -> FIXED
+            const target = aplikasiSaya.semuaSumber.find(s => s.id === sourceId);
+            if (!target) return;
+
+            // Tutup semua yang lain (biar rapi)
+            aplikasiSaya.semuaSumber.forEach(s => {
+                if (s.id !== sourceId) s.isExpanded = false;
+            });
+
+            // Toggle yang diklik
+            target.isExpanded = !target.isExpanded;
+            renderUI();
+        }
+
+        function bayarCicilan(sourceId, cicilanId) {
+            const sumber = aplikasiSaya.semuaSumber.find(s => s.id === sourceId);
+            if (!sumber) return;
+
+            const cicilan = sumber.daftarCicilan.find(c => c.id === cicilanId);
+
+            if (cicilan) {
+                // TOGGLE LOGIC: Bisa Uncheck kalau masih hari yang sama
+                cicilan.sudahLunas = !cicilan.sudahLunas;
+
+                if (cicilan.sudahLunas) {
+                    cicilan.tanggalDibayar = new Date(); // Set time now
+                } else {
+                    cicilan.tanggalDibayar = null; // Reset
+                }
+
+                saveData(); // SIMPAN PERUBAHAN KE LOCAL STORAGE
+                renderUI();
+            }
+        }
+
+        function editCicilan(sourceId, cicilanId) {
+            const sumber = aplikasiSaya.semuaSumber.find(s => s.id === sourceId);
+            const cicilan = sumber.daftarCicilan.find(c => c.id === cicilanId);
+
+            if (cicilan) {
+                // Populate Form
+                document.getElementById('edit-source-id').value = sourceId;
+                document.getElementById('edit-cicilan-id').value = cicilanId;
+                document.getElementById('edit-nominal').value = cicilan.nominal;
+
+                // Format Date for Input (YYYY-MM-DD)
+                const yyyy = cicilan.tanggalJatuhTempo.getFullYear();
+                const mm = String(cicilan.tanggalJatuhTempo.getMonth() + 1).padStart(2, '0');
+                const dd = String(cicilan.tanggalJatuhTempo.getDate()).padStart(2, '0');
+                document.getElementById('edit-tanggal').value = `${yyyy}-${mm}-${dd}`;
+
+                // Show Modal
+                editModal.classList.remove('hidden');
+                editModal.classList.add('flex');
+            }
+        }
+
+        function closeEditModal() {
+            editModal.classList.add('hidden');
+            editModal.classList.remove('flex');
+        }
+
+        function handleEditSubmit(e) {
+            e.preventDefault();
+            const sourceId = document.getElementById('edit-source-id').value;
+            const cicilanId = document.getElementById('edit-cicilan-id').value;
+            const nominal = document.getElementById('edit-nominal').value;
+            const tanggal = document.getElementById('edit-tanggal').value;
+
+            if (sourceId && cicilanId && nominal && tanggal) {
+                aplikasiSaya.updateCicilan(sourceId, cicilanId, nominal, tanggal);
+                saveData();
+                renderUI();
+                closeEditModal();
+            }
+        }
+
+        function resetData() {
+            if (confirm("PERINGATAN: APUS SEMUA DATA?\n\nSemua data hutang akan hilang permanen dan jadi kosong (nol). Anda harus input manual lagi nanti.")) {
+                aplikasiSaya.resetAllData();
+            }
+        }
+
+        // === FORM MODAL LOGIC ===
+        function openModal() {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            // Set default date to today
+            document.getElementById('input-tanggal').valueAsDate = new Date();
+        }
+
+        function closeModal() {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            const nama = document.getElementById('input-nama').value;
+            const bulan = parseInt(document.getElementById('input-bulan').value);
+            const nominal = parseInt(document.getElementById('input-nominal').value);
+            const tanggal = document.getElementById('input-tanggal').value;
+
+            if (nama && bulan && nominal && tanggal) {
+                // Tambah data via method baru di app.js
+                aplikasiSaya.tambahSumberOtomatis(nama, bulan, tanggal, nominal);
+
+                saveData(); // Simpan ke storage
+                renderUI(); // Render ulang
+                closeModal(); // Tutup modal
+                e.target.reset(); // Reset form
+            }
+        }
+
+        // JALANKAN PERTAMA KALI
+        renderUI();
+
+    </script>
+</body>
+
+</html>
