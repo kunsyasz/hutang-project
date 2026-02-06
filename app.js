@@ -213,6 +213,13 @@ class PengelolaHutang {
         }
     }
 
+    hapusSumber(sourceId) {
+        this.semuaSumber = this.semuaSumber.filter(s => s.id !== sourceId);
+        if (db && userPath) {
+            saveData(); // Sync removal to cloud
+        }
+    }
+
     resetAllData() {
         // Hapus data di Cloud
         if (db && userPath) {
