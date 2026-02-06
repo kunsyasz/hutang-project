@@ -8,6 +8,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;700&display=swap"
         rel="stylesheet">
+    <!-- FAVICON (Lightning Bolt) -->
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b026ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M13 10V3L4 14h7v7l9-11h-7z'/></svg>">
     <style>
         :root {
             --neon-green: #b026ff;
@@ -19,6 +22,14 @@
 
         body {
             background-color: var(--dark-bg);
+            /* ANIME ART STYLE BACKGROUND */
+            background-image: linear-gradient(to bottom, rgba(13, 13, 20, 0.7), rgba(0, 0, 0, 0.95)), url('https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=1600&auto=format&fit=crop');
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+            min-height: 100vh;
+            /* Memastikan background full layar */
+
             color: white;
             font-family: 'Inter', sans-serif;
             padding: 0;
@@ -66,6 +77,16 @@
             transition: all 0.5s ease;
         }
     </style>
+    <!-- FIREBASE SDK (Module) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // Expose to window so app.js can use them
+        window.firebaseLib = { initializeApp, getDatabase, ref, set, onValue };
+        // Dispatch event so app knows we are ready
+        window.dispatchEvent(new Event('firebase-ready'));
+    </script>
 </head>
 
 <body class="pb-20">
@@ -84,34 +105,45 @@
                 </div>
                 <div>
                     <div id="realtime-date" class="text-white text-[10px] font-tech mb-0.5">...</div>
-                    <h1 class="text-xl font-bold tracking-wider leading-none">DEBT <span
-                            class="text-[#b026ff]">HUNTER</span></h1>
-                    <div class="text-gray-500 text-[10px] tracking-widest">KUNSY STATUS: <span
-                            class="text-red-500 font-bold">BERHUTANG</span></div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-xl font-bold tracking-wider leading-none">DEBT <span
+                                class="text-[#b026ff]">HUNTER</span></h1>
+                        <span id="sync-status" class="w-2 h-2 rounded-full bg-red-500 animate-pulse"
+                            title="Offline"></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="text-gray-500 text-[10px] tracking-widest">KUNSY STATUS: <span
+                                class="text-red-500 font-bold">BERHUTANG</span></div>
+                        <button onclick="logout()"
+                            class="text-[8px] border border-gray-700 px-1 rounded text-gray-500 hover:text-white hover:bg-red-900 transition-colors"
+                            title="Logout & Ganti ID">LOGOUT</button>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Circular Progress -->
-            <div class="relative w-16 h-16 flex items-center justify-center">
-                <svg class="w-full h-full" viewBox="0 0 100 100">
-                    <circle class="text-gray-800 stroke-current" stroke-width="8" cx="50" cy="50" r="40"
-                        fill="transparent"></circle>
-                    <circle id="progress-circle" class="text-[#b026ff] progress-ring__circle stroke-current"
-                        stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent"
-                        stroke-dasharray="251.2" stroke-dashoffset="0"></circle>
-                </svg>
-                <div id="progress-text" class="absolute text-xs font-bold">0%</div>
+                <!-- Circular Progress -->
+                <div class="relative w-16 h-16 flex items-center justify-center">
+                    <svg class="w-full h-full" viewBox="0 0 100 100">
+                        <circle class="text-gray-800 stroke-current" stroke-width="8" cx="50" cy="50" r="40"
+                            fill="transparent"></circle>
+                        <circle id="progress-circle" class="text-[#b026ff] progress-ring__circle stroke-current"
+                            stroke-width="8" stroke-linecap="round" cx="50" cy="50" r="40" fill="transparent"
+                            stroke-dasharray="251.2" stroke-dashoffset="0"></circle>
+                    </svg>
+                    <div id="progress-text" class="absolute text-xs font-bold">0%</div>
+                </div>
             </div>
         </div>
 
-        <!-- Total Summary Bar -->
-        <div class="bg-[#111] py-2 px-4 flex justify-between items-center max-w-md mx-auto border-b border-gray-800">
-            <span class="text-xs uppercase text-gray-500">Sisa Tanggungan</span>
-            <div class="flex items-center gap-2">
-                <span id="grand-total" class="font-tech text-lg text-white">Rp 0</span>
-                <button onclick="resetData()"
-                    class="text-[10px] bg-red-900 text-red-100 px-2 py-1 rounded ml-2 hover:bg-red-700">RESET
-                    APP</button>
+        <!-- Total Summary Bar (Moved Outside of Top Bar) -->
+        <div class="bg-[#111]/90 backdrop-blur py-2 px-4 border-b border-gray-800">
+            <div class="flex justify-between items-center max-w-md mx-auto">
+                <span class="text-xs uppercase text-gray-500">Sisa Tanggungan</span>
+                <div class="flex items-center gap-2">
+                    <span id="grand-total" class="font-tech text-lg text-white">Rp 0</span>
+                    <button onclick="resetData()"
+                        class="text-[10px] bg-red-900 text-red-100 px-2 py-1 rounded ml-2 hover:bg-red-700">RESET
+                        APP</button>
+                </div>
             </div>
         </div>
     </div>
@@ -198,6 +230,34 @@
                         class="flex-1 py-3 bg-[#b026ff] text-black font-bold rounded hover:bg-[#9020d0] shadow-lg">UPDATE</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- MODAL LOGIN (SYNC) -->
+    <div id="login-modal" class="fixed inset-0 bg-black z-[100] flex items-center justify-center p-4">
+        <div class="text-center w-full max-w-sm">
+            <div class="mb-6 flex justify-center">
+                <div
+                    class="w-16 h-16 rounded-full bg-[#1a1a1a] border border-[#b026ff] flex items-center justify-center shadow-[0_0_30px_rgba(176,38,255,0.6)] animate-bounce">
+                    <svg class="w-8 h-8 text-[#b026ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                </div>
+            </div>
+            <h1 class="text-3xl font-bold mb-2 text-white">DEBT HUNTER</h1>
+            <p class="text-gray-500 mb-8 text-sm">Masukkan ID Rahasia untuk Sinkronisasi</p>
+
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <input type="text" id="login-id" required
+                    class="w-full bg-[#111] border border-[#333] p-4 text-center rounded text-white focus:border-[#b026ff] outline-none tracking-widest text-xl uppercase placeholder-gray-700"
+                    placeholder="BUAT_NAMA_UNIK">
+                <button type="submit"
+                    class="w-full py-4 bg-[#b026ff] text-black font-bold rounded hover:bg-[#9020d0] shadow-[0_0_20px_rgba(176,38,255,0.4)] tracking-widest">
+                    CONNECT SYSTEM
+                </button>
+            </form>
+            <p class="mt-4 text-[10px] text-gray-600">Gunakan ID yang SAMA di semua device Anda.</p>
         </div>
     </div>
 
@@ -448,8 +508,52 @@
             }
         }
 
-        // JALANKAN PERTAMA KALI
-        renderUI();
+        // === LOGIN LOGIC ===
+        const SAVED_ID_KEY = 'DEBT_HUNTER_USER_ID';
+
+        function checkAutoLogin() {
+            const savedId = localStorage.getItem(SAVED_ID_KEY);
+            if (savedId) {
+                // Auto Login
+                console.log("Auto Login as:", savedId);
+                initApp(savedId);
+                document.getElementById('login-modal').classList.add('hidden');
+            } else {
+                // Show Modal
+                document.getElementById('login-modal').classList.remove('hidden');
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const userId = document.getElementById('login-id').value.trim().replace(/\s+/g, '_').toUpperCase();
+            if (userId && userId.length > 3) {
+                // Save ID
+                localStorage.setItem(SAVED_ID_KEY, userId);
+
+                // Initialize App
+                initApp(userId);
+                document.getElementById('login-modal').classList.add('hidden');
+            } else {
+                alert("ID terlalu pendek! Minimal 4 huruf.");
+            }
+        }
+
+        function logout() {
+            if (confirm("Yakin ingin Logout? ID yang tersimpan akan dihapus dari perangkat ini.")) {
+                localStorage.removeItem(SAVED_ID_KEY);
+                location.reload();
+            }
+        }
+
+        // START APP (Wait for Firebase)
+        if (window.firebaseLib) {
+            checkAutoLogin();
+        } else {
+            window.addEventListener('firebase-ready', () => {
+                checkAutoLogin();
+            });
+        }
 
     </script>
 </body>
