@@ -311,7 +311,8 @@
                 // (Sebenarnya objectnya sama reference, tapi kita perlu ID buat fungsi toggle)
 
                 const nextJatuhTempo = sumber.getTanggalTerdekat();
-                const isUrgent = nextJatuhTempo < new Date(new Date().setDate(new Date().getDate() + 7)); // < 7 hari
+                // WARNING LOGIC: Change +7 to +3 days
+                const isUrgent = nextJatuhTempo < new Date(new Date().setDate(new Date().getDate() + 3));
 
                 // Card Wrapper
                 const card = document.createElement('div');
@@ -338,9 +339,10 @@
                     </div>
                 `;
 
-                // 2. DETAIL LIST (Cicilan)
+                // 2. DETAIL LIST (Cicilan) - ADD SCROLL
                 const detail = document.createElement('div');
-                detail.className = `bg-black border-t border-gray-800 transition-all duration-300 ${sumber.isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`;
+                // Added max-h-[300px] and overflow-y-auto for scrolling
+                detail.className = `bg-black border-t border-gray-800 transition-all duration-300 ${sumber.isExpanded ? 'max-h-[300px] opacity-100 overflow-y-auto' : 'max-h-0 opacity-0 overflow-hidden'}`;
 
                 // Render tiap cicilan
                 sumber.daftarCicilan.forEach((cicilan) => {
