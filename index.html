@@ -281,10 +281,23 @@
         const CIRCUMFERENCE = 2 * Math.PI * 40; // 251.2
 
         // 1. UPDATE REALTIME DATE
+        // 1. UPDATE REALTIME DATE & CHECK MIDNIGHT
+        let lastDateString = "";
+
         function updateTime() {
             const now = new Date();
             const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            dateEl.innerText = now.toLocaleDateString('id-ID', options) + " | " + now.toLocaleTimeString('id-ID');
+            const currentDateString = now.toLocaleDateString('id-ID', options);
+
+            dateEl.innerText = currentDateString + " | " + now.toLocaleTimeString('id-ID');
+
+            // DETEKSI PERGANTIAN HARI (00:01)
+            // Jika tanggal berubah dari sebelumnya, refresh halaman agar Warning muncul
+            if (lastDateString && lastDateString !== currentDateString) {
+                console.log("Hari berganti! Refreshing UI...");
+                renderUI();
+            }
+            lastDateString = currentDateString;
         }
         setInterval(updateTime, 1000);
         updateTime();
@@ -386,6 +399,16 @@
                     `;
                     detail.appendChild(row);
                 });
+
+                // BUTTON DELETE SOURCE (SAFE AREA)
+                const deleteBtnContainer = document.createElement('div');
+                deleteBtnContainer.className = "p-4 border-t border-gray-900 bg-black/50 text-center";
+                deleteBtnContainer.innerHTML = `
+                    <button onclick="hapusHutang('${sumber.id}')" class="text-[10px] text-red-500 hover:text-red-300 border border-red-900/50 px-3 py-1 rounded bg-red-900/20 hover:bg-red-900/40 transition-colors">
+                        🗑 HAPUS SUMBER HUTANG INI
+                    </button>
+                `;
+                detail.appendChild(deleteBtnContainer);
 
                 if (visibleCount === 0 && !sumber.isExpanded) {
                     // Optional: Kalau semua hidden/lunas lama, kasih info
@@ -521,12 +544,10 @@
         function checkAutoLogin() {
             const savedId = localStorage.getItem(SAVED_ID_KEY);
             if (savedId) {
-                // Auto Login
                 console.log("Auto Login as:", savedId);
                 initApp(savedId);
                 document.getElementById('login-modal').classList.add('hidden');
             } else {
-                // Show Modal
                 document.getElementById('login-modal').classList.remove('hidden');
             }
         }
@@ -543,6 +564,13 @@
                 document.getElementById('login-modal').classList.add('hidden');
             } else {
                 alert("ID terlalu pendek! Minimal 4 huruf.");
+            }
+        }
+
+        function hapusHutang(sourceId) {
+            if (confirm("YAKIN MENGHAPUS HUTANG INI?\nData yang dihapus tidak bisa dikembalikan!")) {
+                aplikasiSaya.hapusSumber(sourceId);
+                renderUI();
             }
         }
 
